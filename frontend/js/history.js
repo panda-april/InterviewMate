@@ -6,6 +6,39 @@ import { state } from './shared/state.js';
 import { getLanguage, t } from './shared/i18n.js';
 import { showToast } from './shared/toast.js';
 
+// field 中文值 → i18n key 反向映射
+const FIELD_KEY_MAP = {
+  '计算机科学 / 人工智能': 'field.ai',
+  '数据科学 / 机器学习': 'field.ds',
+  '自然语言处理': 'field.nlp',
+  '计算机视觉': 'field.cv',
+  '网络安全': 'field.security',
+  '软件工程': 'field.se',
+  '自动化': 'field.auto',
+  '机器人学': 'field.robotics',
+  '生物信息学': 'field.bioinfo',
+  '认知科学': 'field.cogsci',
+  '计算神经科学': 'field.neuro',
+  '经济学': 'field.econ',
+  '管理学': 'field.mgmt',
+  '管理科学与工程': 'field.mse',
+  '统计学': 'field.stat',
+  '物理': 'field.physics',
+  '数学': 'field.math',
+  '化学': 'field.chem',
+  '生物学': 'field.bio',
+  '医学': 'field.med',
+  '法学': 'field.law',
+  '教育学': 'field.edu',
+  '心理学': 'field.psych',
+};
+
+function translateField(fieldValue) {
+  if (!fieldValue) return '';
+  const key = FIELD_KEY_MAP[fieldValue];
+  return key ? t(key) : fieldValue;
+}
+
 // ══════════════════════════════════════════════════
 // 初始化
 // ══════════════════════════════════════════════════
@@ -48,7 +81,7 @@ async function loadHistoryList() {
               <span class="history-card-persona">🎓 ${escapeHtml(s.persona_name || s.persona_id)}</span>
               <span class="history-card-date">${date}</span>
             </div>
-            <div class="history-card-field">${escapeHtml(s.field)} · ${s.total_rounds} ${t('history.rounds')}</div>
+            <div class="history-card-field">${escapeHtml(translateField(s.field))} · ${s.total_rounds} ${t('history.rounds')}</div>
             <div class="history-card-preview">${escapeHtml(s.feedback_preview || '')}</div>
           </div>
           <div class="history-card-actions">
@@ -104,7 +137,7 @@ async function loadHistoryDetail(sessionId) {
         </div>
         <div class="welcome-hero" style="margin-bottom:20px">
           <h2>🎓 ${escapeHtml(session.persona_name || session.persona_id)}</h2>
-          <p>${escapeHtml(session.field)} · ${session.total_rounds} ${t('history.rounds')} · ${date}</p>
+          <p>${escapeHtml(translateField(session.field))} · ${session.total_rounds} ${t('history.rounds')} · ${date}</p>
         </div>
 
         <div class="setup-section">

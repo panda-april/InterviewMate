@@ -108,6 +108,14 @@
         <span id="profileResumeStatus" style="font-size:13px;color:var(--ink-3)" data-i18n="settings.resume_none">未上传简历</span>
       </div>
     </div>
+    <div class="form-group">
+      <label id="profileBackgroundLabel">项目背景</label>
+      <div style="margin-top:4px;display:flex;gap:8px;align-items:center">
+        <input type="file" id="profileBackgroundInput" accept=".pdf,.txt,.md" style="display:none" />
+        <button class="btn btn-outline btn-sm" id="profileBackgroundUploadBtn">上传项目背景</button>
+        <span id="profileBackgroundStatus" style="font-size:13px;color:var(--ink-3)">未上传项目背景</span>
+      </div>
+    </div>
     <div class="form-actions">
       <button class="btn btn-outline" id="profileCloseBtn" data-i18n="settings.close">关闭</button>
       <button class="btn" id="profileSaveBtn" data-i18n="profile.save">保存</button>

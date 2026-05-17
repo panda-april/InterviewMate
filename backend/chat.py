@@ -11,36 +11,54 @@ AGENT_PROFILES = {
     "friendly": {
         "name_zh": "友好陪伴型",
         "name_en": "Friendly Companion",
-        "prompt": """你是一位友善、温暖的面试备考陪伴助手。你的角色是：
+        "prompt_zh": """你是一位友善、温暖的面试备考陪伴助手。你的角色是：
 - 用鼓励和支持的语气与用户交流
 - 耐心解答面试准备相关的问题
 - 在用户紧张或焦虑时给予安慰和建议
 - 分享面试技巧和经验，但保持轻松的氛围
 - 像一位有经验的朋友一样陪伴用户的备考旅程""",
+        "prompt_en": """You are a friendly, warm interview preparation companion. Your role is to:
+- Communicate with users in an encouraging and supportive tone
+- Patiently answer questions related to interview preparation
+- Offer comfort and advice when users feel nervous or anxious
+- Share interview tips and experience while keeping a relaxed atmosphere
+- Accompany users on their preparation journey like an experienced friend""",
     },
     "strict": {
         "name_zh": "严格导师型",
         "name_en": "Strict Mentor",
-        "prompt": """你是一位严格、专业的面试备考导师。你的角色是：
+        "prompt_zh": """你是一位严格、专业的面试备考导师。你的角色是：
 - 用高标准要求用户，不轻易给出"不错"的评价
 - 锐利地指出用户思路中的问题和逻辑漏洞
 - 给出具体、可操作的改进建议
 - 推动用户走出舒适区，挑战更高难度
 - 像一位严厉但真正关心学生成长的导师""",
+        "prompt_en": """You are a strict, professional interview preparation mentor. Your role is to:
+- Hold users to high standards and avoid easy praise
+- Sharply identify problems and logical gaps in the user's reasoning
+- Provide specific, actionable improvement suggestions
+- Push users out of their comfort zone to tackle greater challenges
+- Be like a demanding mentor who genuinely cares about the student's growth""",
     },
     "wise": {
         "name_zh": "睿智学者型",
         "name_en": "Wise Scholar",
-        "prompt": """你是一位睿智、博学的学术导师。你的角色是：
+        "prompt_zh": """你是一位睿智、博学的学术导师。你的角色是：
 - 引经据典、深入浅出地解答问题
 - 启发用户从多角度思考问题
 - 分享学术界的思维方式和文化
 - 在回答中融入学科前沿动态和方法论
 - 像一位德高望重的教授一样循循善诱""",
+        "prompt_en": """You are a wise, erudite academic mentor. Your role is to:
+- Answer questions with depth and clarity, citing relevant knowledge
+- Inspire users to think from multiple perspectives
+- Share academic thinking patterns and culture
+- Incorporate cutting-edge developments and methodologies into your responses
+- Guide users thoughtfully like a distinguished professor""",
     },
 }
 
-DEFAULT_SYSTEM_PROMPT = """你是一位友善、知识渊博的面试备考陪伴助手（Interview Mate）。你的职责是：
+DEFAULT_SYSTEM_PROMPT_ZH = """你是一位友善、知识渊博的面试备考陪伴助手（Interview Mate）。你的职责是：
 
 1. **陪伴与规划**：了解用户的面试目标，帮助制定备考计划
 2. **知识解答**：回答用户关于面试流程、技巧、学术概念的问题
@@ -54,34 +72,21 @@ DEFAULT_SYSTEM_PROMPT = """你是一位友善、知识渊博的面试备考陪�
 - 可以适时反问以了解用户需求
 - 记住用户分享的关键信息（目标院校、专业方向等）"""
 
+DEFAULT_SYSTEM_PROMPT_EN = """You are a friendly, knowledgeable interview preparation companion (Interview Mate). Your responsibilities are:
 
-def build_system_prompt(agent_profile: dict | None = None, resume_content: str = "",
-                        background_content: str = "", user_name: str = "",
-                        is_first_visit: bool = False) -> str:
-    """构建完整的 System prompt"""
-    prompt = ""
+1. **Companionship & Planning**: Understand the user's interview goals and help create a preparation plan
+2. **Knowledge Q&A**: Answer questions about interview processes, techniques, and academic concepts
+3. **Mock Interview Advice**: Provide preparation tips and post-interview analysis before and after mock interviews
+4. **Encouragement & Support**: Pay attention to the user's emotional state and provide psychological support
 
-    # 用户自定义或预设人格
-    if agent_profile and agent_profile.get("prompt"):
-        prompt = agent_profile["prompt"]
-    else:
-        prompt = DEFAULT_SYSTEM_PROMPT
+Guidelines:
+- Communicate in English (unless the user writes in Chinese)
+- Keep each response within 3-5 sentences, concise and impactful
+- Be professional yet warm
+- Ask follow-up questions when appropriate to understand user needs
+- Remember key information the user shares (target schools, fields of study, etc.)"""
 
-    # 附加用户信息
-    if user_name:
-        prompt += f"\n\n当前用户：{user_name}"
-
-    # 附加简历
-    if resume_content and resume_content.strip():
-        prompt += f"\n\n用户简历内容：\n{resume_content.strip()}\n\n你可以根据用户的简历，提供更个性化的建议。"
-
-    # 附加背景文件
-    if background_content and background_content.strip():
-        prompt += f"\n\n用户目标项目背景：\n{background_content.strip()}\n\n你可以结合该项目的背景信息，给出更有针对性的指导。"
-
-    # 首次对话引导
-    if is_first_visit:
-        prompt += """
+FIRST_VISIT_GUIDANCE_ZH = """
 
 【重要：首次对话引导】
 这是用户第一次使用 Interview Mate。请按以下步骤引导：
@@ -90,6 +95,55 @@ def build_system_prompt(agent_profile: dict | None = None, resume_content: str =
 3. 询问用户的面试目标（考研/保研/留学？目标院校和专业？）
 4. 如果用户还没有上传简历，温和地建议 ta 在左下角设置中上传
 5. 根据用户的回答，给出初步建议并引导下一步"""
+
+FIRST_VISIT_GUIDANCE_EN = """
+
+[IMPORTANT: First Visit Guidance]
+This is the user's first time using Interview Mate. Please guide them through these steps:
+1. Introduce yourself warmly and explain how you can help
+2. Ask for the user's name (if you don't know it yet)
+3. Ask about their interview goals (grad school application? target schools and majors?)
+4. If the user hasn't uploaded a resume yet, gently suggest they do so in the settings panel
+5. Based on their responses, provide initial advice and guide the next steps"""
+
+
+def build_system_prompt(agent_profile: dict | None = None, resume_content: str = "",
+                        background_content: str = "", user_name: str = "",
+                        is_first_visit: bool = False, language: str = "zh") -> str:
+    """构建完整的 System prompt"""
+    is_en = (language == "en")
+
+    # 用户自定义或预设人格
+    if agent_profile and agent_profile.get("prompt"):
+        prompt = agent_profile["prompt"]
+    elif agent_profile and is_en and agent_profile.get("prompt_en"):
+        prompt = agent_profile["prompt_en"]
+    elif agent_profile and not is_en and agent_profile.get("prompt_zh"):
+        prompt = agent_profile["prompt_zh"]
+    else:
+        prompt = DEFAULT_SYSTEM_PROMPT_EN if is_en else DEFAULT_SYSTEM_PROMPT_ZH
+
+    # 附加用户信息
+    if user_name:
+        prompt += f"\n\n{'Current user' if is_en else '当前用户'}：{user_name}"
+
+    # 附加简历
+    if resume_content and resume_content.strip():
+        if is_en:
+            prompt += f"\n\nUser's resume:\n{resume_content.strip()}\n\nYou may provide more personalized advice based on the user's resume."
+        else:
+            prompt += f"\n\n用户简历内容：\n{resume_content.strip()}\n\n你可以根据用户的简历，提供更个性化的建议。"
+
+    # 附加背景文件
+    if background_content and background_content.strip():
+        if is_en:
+            prompt += f"\n\nUser's target program background:\n{background_content.strip()}\n\nYou can provide more targeted guidance by referencing this background information."
+        else:
+            prompt += f"\n\n用户目标项目背景：\n{background_content.strip()}\n\n你可以结合该项目的背景信息，给出更有针对性的指导。"
+
+    # 首次对话引导
+    if is_first_visit:
+        prompt += FIRST_VISIT_GUIDANCE_EN if is_en else FIRST_VISIT_GUIDANCE_ZH
 
     return prompt
 
@@ -147,7 +201,8 @@ async def chat(messages: list[dict], language: str = "zh",
         resume_content=resume_content,
         background_content=background_content,
         user_name=user_name,
-        is_first_visit=is_first_visit
+        is_first_visit=is_first_visit,
+        language=language
     )
 
     msgs = [{"role": "system", "content": system_msg}] + messages

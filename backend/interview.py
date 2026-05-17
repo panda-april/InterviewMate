@@ -11,7 +11,7 @@ import httpx
 from persona import get_style_prompt
 from api_config import get_api_key, get_base_url
 
-SYSTEM_PROMPT_QUESTION = """你是一位研究生入学面试官。你的任务是根据以下信息生成面试问题。
+SYSTEM_PROMPT_QUESTION_ZH = """你是一位研究生入学面试官。你的任务是根据以下信息生成面试问题。
 
 {persona_style}
 
@@ -27,7 +27,23 @@ SYSTEM_PROMPT_QUESTION = """你是一位研究生入学面试官。你的任务�
 
 现在开始面试。"""
 
-SYSTEM_PROMPT_FEEDBACK = """你是一位研究生入学面试评估专家。请基于以下面试记录，生成一份评估报告。
+SYSTEM_PROMPT_QUESTION_EN = """You are a graduate school admission interviewer. Your task is to generate interview questions based on the following information.
+
+{persona_style}
+
+[Candidate's Field of Study] {field}
+
+Interview Rules:
+1. First round: Start with an open-ended question to understand the candidate's background and research interests
+2. Subsequent rounds: Follow up on the candidate's answers, probing for technical details and research thinking
+3. Keep each response to 2-3 sentences, don't give too much information at once
+4. Stay in the interviewer role, don't answer questions for the candidate
+5. Occasionally ask counter-questions to test the depth of the candidate's thinking
+6. Ask only 1 question per round
+
+Begin the interview now."""
+
+SYSTEM_PROMPT_FEEDBACK_ZH = """你是一位研究生入学面试评估专家。请基于以下面试记录，生成一份评估报告。
 
 【面试官风格】{persona_style}
 【目标专业方向】{field}
@@ -43,6 +59,23 @@ SYSTEM_PROMPT_FEEDBACK = """你是一位研究生入学面试评估专家。请�
 8. **综合评分**（1-10分）
 
 请用中文回复，语气专业但友善。评分要附上简短理由。"""
+
+SYSTEM_PROMPT_FEEDBACK_EN = """You are a graduate school admission interview evaluator. Please generate an evaluation report based on the following interview transcript.
+
+[Interviewer Style] {persona_style}
+[Target Field] {field}
+
+Please evaluate from the following aspects:
+1. **Overall Impression** (one-sentence summary)
+2. **Subject Knowledge** (the candidate's mastery of professional knowledge, 1-10)
+3. **Logical Thinking** (structure and logic of responses, 1-10)
+4. **Research Potential** (research thinking and originality demonstrated, 1-10)
+5. **Communication** (clarity and confidence of expression, 1-10)
+6. **Strengths & Highlights** (specific bright spots)
+7. **Areas for Improvement** (specific directions and practice suggestions)
+8. **Overall Score** (1-10)
+
+Please respond in English with a professional yet friendly tone. Include brief justifications for each score."""
 
 
 # ── Session 管理 ──────────────────────────────────
@@ -139,8 +172,11 @@ async def start_interview(persona_id: str, field: str, background: str | None = 
                               persona_name=persona_name)
     session.save()
 
+    is_en = (language == "en")
+
     # 基础 system prompt
-    system_msg = SYSTEM_PROMPT_QUESTION.format(
+    question_template = SYSTEM_PROMPT_QUESTION_EN if is_en else SYSTEM_PROMPT_QUESTION_ZH
+    system_msg = question_template.format(
         persona_style=style_prompt,
         field=field
     )
@@ -150,11 +186,17 @@ async def start_interview(persona_id: str, field: str, background: str | None = 
 
     # 如果有背景文件内容，附加到 system prompt
     if background and background.strip():
-        system_msg += f"\n\n【项目背景要求】\n{background.strip()}\n\n请注意：以上是候选人的项目背景信息。面试问题时需要结合候选人的项目背景进行针对性提问，考察候选人对该领域的理解和匹配度。"
+        if is_en:
+            system_msg += f"\n\n[Project Background Requirement]\n{background.strip()}\n\nNote: The above is the candidate's target program background. Interview questions should incorporate this background to assess the candidate's understanding of and fit for the program."
+        else:
+            system_msg += f"\n\n【项目背景要求】\n{background.strip()}\n\n请注意：以上是候选人的项目背景信息。面试问题时需要结合候选人的项目背景进行针对性提问，考察候选人对该领域的理解和匹配度。"
 
     # 如果有简历内容，附加到 system prompt
     if resume and resume.strip():
-        system_msg += f"\n\n【候选人简历】\n{resume.strip()}\n\n注意：以上是候选人的个人简历。面试官应该仔细阅读简历内容，并基于简历中的经历、技能和项目提出有针对性的问题。"
+        if is_en:
+            system_msg += f"\n\n[Candidate Resume]\n{resume.strip()}\n\nNote: The above is the candidate's resume. The interviewer should carefully review the resume content and ask targeted questions based on the candidate's experience, skills, and projects."
+        else:
+            system_msg += f"\n\n【候选人简历】\n{resume.strip()}\n\n注意：以上是候选人的个人简历。面试官应该仔细阅读简历内容，并基于简历中的经历、技能和项目提出有针对性的问题。"
 
     first_user_msg = "请开始面试，先让我自我介绍。" if language == "zh" else "Please start the interview. Let me introduce myself first."
 
@@ -192,7 +234,9 @@ async def continue_interview(session_id: str, user_message: str) -> dict:
     style_prompt = get_style_prompt(session.persona_id, language=session.language)
 
     # 构建消息历史
-    system_msg = SYSTEM_PROMPT_QUESTION.format(
+    is_en = (session.language == "en")
+    question_template = SYSTEM_PROMPT_QUESTION_EN if is_en else SYSTEM_PROMPT_QUESTION_ZH
+    system_msg = question_template.format(
         persona_style=style_prompt,
         field=session.field
     )
@@ -236,13 +280,19 @@ async def end_interview(session_id: str) -> dict:
 
     style_prompt = get_style_prompt(session.persona_id, language=session.language)
 
+    is_en = (session.language == "en")
+
     # 整理对话记录
     transcript = ""
     for msg in session.messages:
-        role = "面试官" if msg["role"] == "assistant" else "候选人"
+        if msg["role"] == "assistant":
+            role = "Interviewer" if is_en else "面试官"
+        else:
+            role = "Candidate" if is_en else "候选人"
         transcript += f"\n[{role}]: {msg['content']}\n"
 
-    system_msg = SYSTEM_PROMPT_FEEDBACK.format(
+    feedback_template = SYSTEM_PROMPT_FEEDBACK_EN if is_en else SYSTEM_PROMPT_FEEDBACK_ZH
+    system_msg = feedback_template.format(
         persona_style=style_prompt,
         field=session.field
     )

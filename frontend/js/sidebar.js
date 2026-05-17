@@ -20,6 +20,15 @@ async function init() {
   window.addEventListener('languagechanged', () => {
     loadResumeStatus();
     updateSidebarUI();
+    // 更新 profile 弹窗中的项目背景元素（无 data-i18n）
+    const bgBtn = document.getElementById('profileBackgroundUploadBtn');
+    if (bgBtn) bgBtn.textContent = t('profile.background_upload') || '上传项目背景';
+    const bgLabel = document.getElementById('profileBackgroundLabel');
+    if (bgLabel) bgLabel.textContent = t('profile.background_label') || '项目背景';
+    const bgStatus = document.getElementById('profileBackgroundStatus');
+    if (bgStatus && !bgStatus.textContent.startsWith('✅')) {
+      bgStatus.textContent = t('profile.background_none') || '未上传项目背景';
+    }
   });
 
   // 首次访问 → 显示语言选择（仅 chat 页有此弹窗，其他页跳过）
@@ -61,6 +70,10 @@ function setupEventListeners() {
     document.getElementById('profileResumeInput')?.click();
   });
   document.getElementById('profileResumeInput')?.addEventListener('change', handleProfileResume);
+  document.getElementById('profileBackgroundUploadBtn')?.addEventListener('click', () => {
+    document.getElementById('profileBackgroundInput')?.click();
+  });
+  document.getElementById('profileBackgroundInput')?.addEventListener('change', handleProfileBackground);
 
   // 侧边栏底部 — 配置 Agent（所有页面共享）
   document.getElementById('sidebarAgentBtn')?.addEventListener('click', openAgentModal);
@@ -140,7 +153,13 @@ async function loadResumeStatus() {
 function openProfileModal() {
   document.getElementById('profileNameInput').value = state.userProfile.name || '';
   document.getElementById('profileModal').classList.add('show');
+  // 显式设置项目背景按钮文字，避免 i18n 时序问题
+  const bgBtn = document.getElementById('profileBackgroundUploadBtn');
+  if (bgBtn) bgBtn.textContent = t('profile.background_upload');
+  const bgLabel = document.getElementById('profileBackgroundLabel');
+  if (bgLabel) bgLabel.textContent = t('profile.background_label') || '项目背景';
   loadResumeStatus();
+  loadBackgroundStatus();
 }
 
 function saveProfile() {
@@ -171,14 +190,61 @@ async function handleProfileResume(event) {
   }
 }
 
+async function loadBackgroundStatus() {
+  try {
+    const res = await fetch(`${API}/api/background`);
+    const data = await res.json();
+    const el = document.getElementById('profileBackgroundStatus');
+    if (!el) return;
+    if (data.has_background) {
+      el.textContent = `✅ ${data.filename}`;
+      el.style.color = '#16A34A';
+    } else {
+      el.textContent = t('profile.background_none');
+      el.style.color = '';
+    }
+  } catch (e) {
+    // 忽略
+  }
+}
+
+async function handleProfileBackground(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const res = await fetch(`${API}/api/background/upload`, { method: 'POST', body: formData });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || t('toast.upload_fail'));
+    }
+    showToast(t('settings.bg_success') + file.name, 'success');
+    loadBackgroundStatus();
+  } catch (e) {
+    showToast(t('toast.upload_fail') + e.message, 'error');
+  }
+}
+
 // ══════════════════════════════════════════════════
 // Agent 配置
 // ══════════════════════════════════════════════════
 
 const AGENT_PRESET_PROMPTS = {
-  friendly: '你是一位友善、温暖的面试备考陪伴助手。你的角色是：\n- 用鼓励和支持的语气与用户交流\n- 耐心解答面试准备相关的问题\n- 在用户紧张或焦虑时给予安慰和建议\n- 分享面试技巧和经验，但保持轻松的氛围\n- 像一位有经验的朋友一样陪伴用户的备考旅程',
-  strict: '你是一位严格、专业的面试备考导师。你的角色是：\n- 用高标准要求用户，不轻易给出"不错"的评价\n- 锐利地指出用户思路中的问题和逻辑漏洞\n- 给出具体、可操作的改进建议\n- 推动用户走出舒适区，挑战更高难度\n- 像一位严厉但真正关心学生成长的导师',
-  wise: '你是一位睿智、博学的学术导师。你的角色是：\n- 引经据典、深入浅出地解答问题\n- 启发用户从多角度思考问题\n- 分享学术界的思维方式和文化\n- 在回答中融入学科前沿动态和方法论\n- 像一位德高望重的教授一样循循善诱',
+  friendly: {
+    zh: '你是一位友善、温暖的面试备考陪伴助手。你的角色是：\n- 用鼓励和支持的语气与用户交流\n- 耐心解答面试准备相关的问题\n- 在用户紧张或焦虑时给予安慰和建议\n- 分享面试技巧和经验，但保持轻松的氛围\n- 像一位有经验的朋友一样陪伴用户的备考旅程',
+    en: 'You are a friendly, warm interview preparation companion. Your role is to:\n- Communicate with users in an encouraging and supportive tone\n- Patiently answer questions related to interview preparation\n- Offer comfort and advice when users feel nervous or anxious\n- Share interview tips and experience while keeping a relaxed atmosphere\n- Accompany users on their preparation journey like an experienced friend',
+  },
+  strict: {
+    zh: '你是一位严格、专业的面试备考导师。你的角色是：\n- 用高标准要求用户，不轻易给出"不错"的评价\n- 锐利地指出用户思路中的问题和逻辑漏洞\n- 给出具体、可操作的改进建议\n- 推动用户走出舒适区，挑战更高难度\n- 像一位严厉但真正关心学生成长的导师',
+    en: 'You are a strict, professional interview preparation mentor. Your role is to:\n- Hold users to high standards and avoid easy praise\n- Sharply identify problems and logical gaps in the user\'s reasoning\n- Provide specific, actionable improvement suggestions\n- Push users out of their comfort zone to tackle greater challenges\n- Be like a demanding mentor who genuinely cares about the student\'s growth',
+  },
+  wise: {
+    zh: '你是一位睿智、博学的学术导师。你的角色是：\n- 引经据典、深入浅出地解答问题\n- 启发用户从多角度思考问题\n- 分享学术界的思维方式和文化\n- 在回答中融入学科前沿动态和方法论\n- 像一位德高望重的教授一样循循善诱',
+    en: 'You are a wise, erudite academic mentor. Your role is to:\n- Answer questions with depth and clarity, citing relevant knowledge\n- Inspire users to think from multiple perspectives\n- Share academic thinking patterns and culture\n- Incorporate cutting-edge developments and methodologies into your responses\n- Guide users thoughtfully like a distinguished professor',
+  },
 };
 
 async function openAgentModal() {
@@ -189,8 +255,11 @@ async function openAgentModal() {
     btn.classList.toggle('active', btn.dataset.profile === profile.agentProfileId);
   });
 
-  // 填充自定义 prompt
-  const prompt = profile.agentCustomPrompt || AGENT_PRESET_PROMPTS[profile.agentProfileId] || '';
+  // 填充自定义 prompt（按当前语言选择预设）
+  const preset = AGENT_PRESET_PROMPTS[profile.agentProfileId];
+  const lang = getLanguage();
+  const presetText = preset ? (preset[lang] || preset.zh) : '';
+  const prompt = profile.agentCustomPrompt || presetText;
   document.getElementById('agentCustomPrompt').value = prompt;
 
   // 查询服务器 Key 状态
@@ -308,7 +377,9 @@ function selectAgentPreset(profileId) {
     btn.classList.toggle('active', btn.dataset.profile === profileId);
   });
   state.userProfile.agentProfileId = profileId;
-  document.getElementById('agentCustomPrompt').value = AGENT_PRESET_PROMPTS[profileId] || '';
+  const preset = AGENT_PRESET_PROMPTS[profileId];
+  const lang = getLanguage();
+  document.getElementById('agentCustomPrompt').value = preset ? (preset[lang] || preset.zh) : '';
 }
 
 function saveAgentConfig() {

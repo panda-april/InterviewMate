@@ -27,14 +27,29 @@ async function initChat() {
   setupChatListeners();
 
   // 首次对话 → 触发引导消息
+  // 如果用户已选择过语言（老用户）→ 直接发送；否则等待语言选择
   if (state.chatMessages.length === 0 && !getStorage('hasChatted', false)) {
     isFirstVisit = true;
-    sendFirstMessage();
+    const langChosen = getStorage('langChosen', false);
+    if (langChosen) {
+      sendFirstMessage();
+    }
+    // 若未选择语言，等待 languagechanged 事件触发
   }
 
   window.addEventListener('languagechanged', () => {
     const input = document.getElementById('chatMessageInput');
     if (input) input.placeholder = t('chat.placeholder');
+    // 首次访问：语言确定后使用对应语言的固定欢迎消息
+    if (isFirstVisit) {
+      if (state.chatMessages.length <= 1) {
+        state.chatMessages = [{ role: 'assistant', content: t('chat.welcome') }];
+        setStorage('chatMessages', state.chatMessages);
+        setStorage('hasChatted', true);
+        renderMessages();
+      }
+      isFirstVisit = false;
+    }
   });
 }
 
